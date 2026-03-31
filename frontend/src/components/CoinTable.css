@@ -1,0 +1,205 @@
+/* src/components/CoinTable.css */
+.table-section {
+    margin-bottom: 1.5rem;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+}
+
+.section-title {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+}
+
+.live-badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--accent-green);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.table-wrap {
+    overflow-x: auto;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    box-shadow: var(--shadow-card);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+thead tr {
+    background: var(--bg-card-hover);
+    border-bottom: 2px solid var(--border);
+}
+
+thead th {
+    padding: 0.8rem 1rem;
+    text-align: left;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+thead th.right {
+    text-align: right;
+}
+
+tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+}
+
+tbody tr:last-child {
+    border-bottom: none;
+}
+
+tbody tr:hover {
+    background: var(--bg-card-hover);
+}
+
+/* Flash animation when row updates */
+tbody tr.flash {
+    animation: row-flash 0.6s ease;
+}
+
+@keyframes row-flash {
+    0% {
+        background: rgba(59, 130, 246, 0.18);
+    }
+
+    100% {
+        background: transparent;
+    }
+}
+
+td {
+    padding: 0.85rem 1rem;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+td.right {
+    text-align: right;
+}
+
+/* Rank */
+.rank {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    width: 32px;
+}
+
+/* Coin cell */
+.coin-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.coin-img {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--bg-card-hover);
+}
+
+.coin-name {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.coin-symbol {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+}
+
+/* Price */
+.price {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+/* Change pill */
+.change-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: var(--font-mono);
+}
+
+.change-pill.up {
+    background: rgba(16, 185, 129, 0.12);
+    color: var(--up-color);
+}
+
+.change-pill.down {
+    background: rgba(239, 68, 68, 0.12);
+    color: var(--down-color);
+}
+
+.change-pill.neutral {
+    background: rgba(99, 179, 237, 0.08);
+    color: var(--neutral-color);
+}
+
+/* Volume / Mktcap */
+.big-num {
+    font-family: var(--font-mono);
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+}
+
+/* Range bar (high-low) */
+.range-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+}
+
+.range-bar-outer {
+    width: 80px;
+    height: 4px;
+    background: rgba(99, 179, 237, 0.12);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.range-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
+    border-radius: 2px;
+}
+
+.range-text {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+}
