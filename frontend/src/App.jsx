@@ -1,6 +1,8 @@
-// src/App.jsx — Root Dashboard Component
+// src/App.jsx — Root Dashboard Component with Authentication
 import './App.css';
+import { useState, useEffect } from 'react';
 import { useCryptoStream } from './hooks/useCryptoStream';
+import LoginPage from './pages/LoginPage';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import MetricCards from './components/MetricCards';
@@ -10,18 +12,64 @@ import PipelineLog from './components/PipelineLog';
 import DataImport from './components/DataImport';
 
 export default function App() {
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
+
     const { coins, history, stats, connected, lastUpdate, totalUpdates } = useCryptoStream();
     const coinCount = Object.keys(coins).length;
 
+    // Check if user is already authenticated on mount
+    useEffect(() => {
+        const token = localStorage.getItem('authToken');
+        const userData = localStorage.getItem('user');
+        
+        if (token && userData) {
+            setUser(JSON.parse(userData));
+            setIsAuthenticated(true);
+        }
+        
+        setLoading(false);
+    }, []);
+
+    const handleLoginSuccess = (data) => {
+        setUser(data.user);
+        setIsAuthenticated(true);
+    };
+
+    const handleLogout = () => {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
+        setUser(null);
+        setIsAuthenticated(false);
+    };
+
+    if (loading) {
+        return (
+            <div className="app-loading">
+                <div className="loader">
+                    <div className="spinner"></div>
+                    <p>Loading CryptoFlow...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (!isAuthenticated) {
+        return <LoginPage onLoginSuccess={handleLoginSuccess} />;
+    }
+
     return (
         <div className="app-layout">
-            <Sidebar />
+            <Sidebar user={user} onLogout={handleLogout} />
             <div className="app-main">
                 <Header
                     coins={coins}
                     connected={connected}
                     lastUpdate={lastUpdate}
                     totalUpdates={totalUpdates}
+                    user={user}
+                    onLogout={handleLogout}
                 />
 
                 <main className="main">
@@ -76,11 +124,12 @@ export default function App() {
                         <DataImport />
 
                         {/* ── Section 6: Pipeline Log ── */}
-
                         <PipelineLog />
+
                     </div>
-                </main>             
-              </div>
+                </main>
+            </div>
         </div>
-    );                      
+    );
+}
 }

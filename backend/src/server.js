@@ -26,6 +26,11 @@ const { initDB } = require('./config/db');
 const { initWsStream } = require('./streaming/wsStream');
 const { startPipeline, stopPipeline } = require('./pipeline/pipeline');
 const apiRoutes = require('./routes/api');
+const authRoutes = require('./routes/auth');
+
+// ── New middleware imports ────────────────────────────────────────────────────
+const { requestLogger, RateLimiter, errorHandler, CacheStore } = require('./middleware');
+const { sendSuccess, sendError } = require('./utils/response');
 
 const PORT = process.env.PORT || 5000;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -42,35 +47,90 @@ const io = new Server(httpServer, {
         origin: '*',
         methods: ['GET', 'POST'],
     },
-    // Increase ping timeout for slow networks
     pingTimeout: 30000,
     pingInterval: 10000,
 });
 
-// ── 4. Middleware ─────────────────────────────────────────────────────────────
-app.use(cors({ origin: '*' }));
-app.use(express.json());
+// ── 4. Middleware Stack ───────────────────────────────────────────────────────
+// CORS Configuration
+app.use(cors({ 
+    origin: process.env.FRONTEND_URL || '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    maxAge: 3600,
+}));
 
-// Request logger (simple, inline)
-app.use((req, _res, next) => {
-    console.log(`[HTTP] ${req.method} ${req.url}`);
+// Body parsing
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
+// Security headers
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     next();
 });
 
+// Request logging
+app.use(requestLogger);
+
+// Rate limiting (100 requests per minute per IP)
+const rateLimiter = new RateLimiter(60000, 100);
+app.use('/api', rateLimiter.middleware());
+
 // ── 5. REST Routes ────────────────────────────────────────────────────────────
+// Authentication routes (no rate limiting)
+app.use('/auth', authRoutes);
+
+// API routes (with rate limiting)
 app.use('/api', apiRoutes);
 
 // Root ping
 app.get('/', (_req, res) => {
-    res.json({
+    sendSuccess(res, {
         project: 'Dual Streaming Pipeline',
         status: 'running',
-        endpoints: ['/api/health', '/api/latest', '/api/history', '/api/stats'],
+        version: '2.0.0',
+        features: [
+            'Real-time WebSocket streaming',
+            'REST API with validation',
+            'CSV data export',
+            'Rate limiting & caching',
+            'Request logging',
+        ],
+        endpoints: {
+            health: '/api/health',
+            latest: '/api/latest',
+            history: '/api/history',
+            stats: '/api/stats',
+            csvSample: '/api/csv/sample',
+            csvDemo: '/api/csv/demo',
+            docs: '/api-docs',
+        },
         websocket: `ws://localhost:${PORT}  → event: crypto:update`,
-    });
+    }, 'Server is running');
 });
 
-// ── 6. Socket.io Connection Events ───────────────────────────────────────────
+// Health status with detailed info
+app.get('/health', (_req, res) => {
+    sendSuccess(res, {
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        timestamp: new Date().toISOString(),
+    }, 'Server is healthy');
+});
+
+// ── 6. Error Handling Middleware (must be last) ──────────────────────────────
+app.use(errorHandler);
+
+// 404 handler
+app.use((req, res) => {
+    sendError(res, `Route not found: ${req.method} ${req.path}`, 404, 'NOT_FOUND');
+});
+
+// ── 7. Socket.io Connection Events ───────────────────────────────────────────
 io.on('connection', (socket) => {
     console.log(`🔌 [WS] Client connected    — id: ${socket.id}  total: ${io.engine.clientsCount}`);
 
