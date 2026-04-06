@@ -16,15 +16,18 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 let _io = null;
+let _updateCoinsCache = null;
 
 /**
  * Initialize the WebSocket stream with a Socket.io server instance.
  * Must be called before streamToWS().
  *
  * @param {import('socket.io').Server} io
+ * @param {Function} updateCoinsCache - Function to update API cache
  */
-function initWsStream(io) {
+function initWsStream(io, updateCoinsCache) {
     _io = io;
+    _updateCoinsCache = updateCoinsCache;
     console.log('🔌 WebSocket Stream initialized');
 }
 
@@ -39,6 +42,11 @@ function streamToWS(coins) {
         return;
     }
     if (!coins || coins.length === 0) return;
+
+    // Update API cache so /api/latest can serve data even without DB
+    if (_updateCoinsCache) {
+        _updateCoinsCache(coins);
+    }
 
     const payload = {
         timestamp: new Date().toISOString(),  // Server-side timestamp

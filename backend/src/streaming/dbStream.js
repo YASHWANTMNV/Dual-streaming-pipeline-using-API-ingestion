@@ -16,11 +16,18 @@ const { pool } = require('../config/db');
 /**
  * Insert a batch of processed coin records into MySQL.
  * Uses a single bulk INSERT for efficiency.
+ * Fails gracefully if database is unavailable.
  *
  * @param {Array} coins - Array of clean coin objects from dataProcessor
  */
 async function streamToDB(coins) {
     if (!coins || coins.length === 0) return;
+
+    // Check if pool connection is available
+    if (!pool) {
+        // Silently skip DB streaming if database is not configured
+        return;
+    }
 
     // Build bulk INSERT: INSERT INTO table (col1, col2, ...) VALUES (?, ?, ...), (?, ?, ...), ...
     const columns = [

@@ -52,11 +52,30 @@ router.get('/history', async (req, res) => {
     }
 });
 
+// ──  Global cache for latest data (updated by pipeline) ─────────────────────────
+let latestCoinsCache = [];
+let pipelineStats = {
+    totalUpdates: 0,
+    lastUpdate: new Date().toISOString(),
+};
+
+// Export functions to update cache (called by pipeline/wsStream)
+function updateCoinsCache(coins) {
+    latestCoinsCache = Array.isArray(coins) ? coins : Object.values(coins || {});
+    pipelineStats.lastUpdate = new Date().toISOString();
+    pipelineStats.totalUpdates += 1;
+}
+
+function updateStats(stats) {
+    Object.assign(pipelineStats, stats);
+}
+
 // ── GET /api/latest ──────────────────────────────────────────────────────────
 // Returns the single most recent record per coin.
 // Used by the frontend on initial load before WebSocket data arrives.
 router.get('/latest', async (req, res) => {
     try {
+        // Try database first
         const sql = `
       SELECT cp.*
       FROM crypto_prices cp
@@ -68,10 +87,16 @@ router.get('/latest', async (req, res) => {
       ORDER BY cp.market_cap DESC
     `;
         const [rows] = await pool.execute(sql);
-        res.json({ success: true, count: rows.length, data: rows });
+        res.json({ success: true, count: rows.length, data: rows, source: 'database' });
     } catch (err) {
-        console.error('❌ /api/latest error:', err.message);
-        res.status(500).json({ success: false, error: err.message });
+        // Fall back to in-memory cache from pipeline
+        console.warn('⚠️  /api/latest fallback to cache:', err.message);
+        res.json({ 
+            success: true, 
+            count: latestCoinsCache.length, 
+            data: latestCoinsCache,
+            source: 'pipeline-cache' 
+        });
     }
 });
 
@@ -79,6 +104,7 @@ router.get('/latest', async (req, res) => {
 // Aggregate pipeline statistics.
 router.get('/stats', async (req, res) => {
     try {
+        // Try database first
         const [[stats]] = await pool.execute(`
       SELECT
         COUNT(*)                          AS total_records,
@@ -89,10 +115,15 @@ router.get('/stats', async (req, res) => {
         SUM(total_volume)                 AS total_volume_usd
       FROM crypto_prices
     `);
-        res.json({ success: true, data: stats });
+        res.json({ success: true, data: stats, source: 'database' });
     } catch (err) {
-        console.error('❌ /api/stats error:', err.message);
-        res.status(500).json({ success: false, error: err.message });
+        // Fall back to pipeline stats
+        console.warn('⚠️  /api/stats fallback to pipeline:', err.message);
+        res.json({ 
+            success: true, 
+            data: pipelineStats,
+            source: 'pipeline' 
+        });
     }
 });
 
@@ -317,3 +348,5 @@ function processcsvData(data) {
 }
 
 module.exports = router;
+module.exports.updateCoinsCache = updateCoinsCache;
+module.exports.updateStats = updateStats;

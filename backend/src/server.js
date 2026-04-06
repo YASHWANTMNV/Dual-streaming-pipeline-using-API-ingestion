@@ -88,11 +88,17 @@ io.on('connection', (socket) => {
 // ── 7. Bootstrap: DB → WsStream → Pipeline ────────────────────────────────────
 async function bootstrap() {
     try {
-        // Step A: Initialize database
-        await initDB();
+        // Step A: Initialize database (optional - continue if fails)
+        try {
+            await initDB();
+            console.log('✅ Database successfully initialized');
+        } catch (dbErr) {
+            console.warn('⚠️  Database unavailable:', dbErr.message);
+            console.warn('⚠️  Running in demo mode (no DB streaming, CSV endpoints work)');
+        }
 
         // Step B: Wire Socket.io into the WebSocket stream module
-        initWsStream(io);
+        initWsStream(io, apiRoutes.updateCoinsCache);
 
         // Step C: Start the dual streaming pipeline
         startPipeline();
