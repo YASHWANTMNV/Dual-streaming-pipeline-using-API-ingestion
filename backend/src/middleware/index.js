@@ -129,10 +129,10 @@ function requestLogger(req, res, next) {
     res.json = function (data) {
         const duration = Date.now() - startTime;
         const statusCode = res.statusCode;
-        const successEmoji = statusCode >= 400 ? '❌' : '✅';
+        const status = statusCode >= 400 ? 'FAIL' : 'OK';
 
         console.log(
-            `${successEmoji} [${duration}ms] ${method} ${path} ${statusCode} | IP: ${clientIp}`
+            `[${status}] [${duration}ms] ${method} ${path} ${statusCode} | IP: ${clientIp}`
         );
 
         // Log errors in detail

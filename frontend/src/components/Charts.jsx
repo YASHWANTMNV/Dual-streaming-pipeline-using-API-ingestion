@@ -46,11 +46,15 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 // ── 1. Market Cap Bar Chart ───────────────────────────────────────────────────
 const MarketCapChartComponent = ({ coins }) => {
+    if (!coins || typeof coins !== 'object' || Object.keys(coins).length === 0) {
+        return <div className="chart-empty">⏳ Waiting for data…</div>;
+    }
+    
     const data = Object.values(coins)
-        .sort((a, b) => b.market_cap - a.market_cap)
-        .map(c => ({ name: c.symbol, value: c.market_cap }));
+        .sort((a, b) => (b.market_cap || 0) - (a.market_cap || 0))
+        .map(c => ({ name: c.symbol, value: c.market_cap || 0 }));
 
-    if (!data.length) return <div className="chart-empty">Waiting for data…</div>;
+    if (!data.length) return <div className="chart-empty">⏳ Waiting for data…</div>;
 
     return (
         <div className="chart-card card">
@@ -77,6 +81,10 @@ export const MarketCapChart = React.memo(MarketCapChartComponent);
 
 // ── 2. Price Sparklines Grid ──────────────────────────────────────────────────
 const SparklineGridComponent = ({ coins, history }) => {
+    if (!coins || typeof coins !== 'object' || Object.keys(coins).length === 0) {
+        return <div style={{ padding: '20px', textAlign: 'center', color: '#7aa8c7' }}>⏳ Waiting for data…</div>;
+    }
+    
     const coinList = Object.values(coins).slice(0, 6); // Top 6
 
     if (!coinList.length) return null;
@@ -128,12 +136,16 @@ export const SparklineGrid = React.memo(SparklineGridComponent);
 
 // ── 3. Volume Pie Chart ───────────────────────────────────────────────────────
 const VolumeChartComponent = ({ coins }) => {
+    if (!coins || typeof coins !== 'object' || Object.keys(coins).length === 0) {
+        return <div className="chart-empty">⏳ Waiting for data…</div>;
+    }
+    
     const data = Object.values(coins)
-        .filter(c => c.total_volume > 0)
-        .sort((a, b) => b.total_volume - a.total_volume)
-        .map(c => ({ name: c.symbol, value: c.total_volume }));
+        .filter(c => (c.total_volume || 0) > 0)
+        .sort((a, b) => (b.total_volume || 0) - (a.total_volume || 0))
+        .map(c => ({ name: c.symbol, value: c.total_volume || 0 }));
 
-    if (!data.length) return <div className="chart-empty">Waiting for data…</div>;
+    if (!data.length) return <div className="chart-empty">⏳ Waiting for data…</div>;
 
     return (
         <div className="chart-card card">

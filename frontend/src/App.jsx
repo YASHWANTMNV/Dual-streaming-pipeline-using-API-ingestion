@@ -1,15 +1,20 @@
-// src/App.jsx — Root Dashboard Component with Authentication
+// src/App.jsx — Root Dashboard Component with Authentication & Routing
 import './App.css';
 import { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useCryptoStream } from './hooks/useCryptoStream';
 import LoginPage from './pages/LoginPage';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
-import MetricCards from './components/MetricCards';
-import CoinTable from './components/CoinTable';
-import { MarketCapChart, VolumeChart, SparklineGrid } from './components/Charts';
-import PipelineLog from './components/PipelineLog';
-import DataImport from './components/DataImport';
+// Import all page components
+import Overview from './pages/Overview';
+import RealTimeData from './pages/RealTimeData';
+import MarketTrends from './pages/MarketTrends';
+import WebSocketStream from './pages/WebSocketStream';
+import MySQLStorage from './pages/MySQLStorage';
+import Settings from './pages/Settings';
+import AccessControl from './pages/AccessControl';
+import DatasetManagement from './pages/DatasetManagement';
 
 export default function App() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -60,76 +65,50 @@ export default function App() {
     }
 
     return (
-        <div className="app-layout">
-            <Sidebar user={user} onLogout={handleLogout} />
-            <div className="app-main">
-                <Header
-                    coins={coins}
-                    connected={connected}
-                    lastUpdate={lastUpdate}
-                    totalUpdates={totalUpdates}
-                    user={user}
-                    onLogout={handleLogout}
-                />
+        <Router>
+            <div className="app-layout">
+                <Sidebar user={user} onLogout={handleLogout} />
+                <div className="app-main">
+                    <Header
+                        coins={coins}
+                        connected={connected}
+                        lastUpdate={lastUpdate}
+                        totalUpdates={totalUpdates}
+                        user={user}
+                        onLogout={handleLogout}
+                    />
 
-                <main className="main">
-                    <div className="container">
+                    <main className="main">
+                        <div className="container">
+                            <Routes>
+                                {/* DASHBOARDS Section */}
+                                <Route path="/" element={
+                                    <Overview coins={coins} history={history} stats={stats} connected={connected} lastUpdate={lastUpdate} totalUpdates={totalUpdates} />
+                                } />
+                                <Route path="/overview" element={
+                                    <Overview coins={coins} history={history} stats={stats} connected={connected} lastUpdate={lastUpdate} totalUpdates={totalUpdates} />
+                                } />
+                                <Route path="/real-time-data" element={
+                                    <RealTimeData coins={coins} connected={connected} lastUpdate={lastUpdate} totalUpdates={totalUpdates} />
+                                } />
+                                <Route path="/market-trends" element={
+                                    <MarketTrends coins={coins} history={history} stats={stats} />
+                                } />
 
-                        {/* ── Pipeline Hero Banner ── */}
-                        <div className="hero-banner">
-                            <div className="hero-text">
-                                <h1 className="hero-title">
-                                    Dual Streaming Pipeline
-                                    <span className="hero-accent"> · Real-Time</span>
-                                </h1>
-                                <p className="hero-desc">
-                                    Live crypto data ingested from <strong>CoinGecko API</strong> →
-                                    processed → streamed simultaneously to <strong>MySQL</strong> and
-                                    <strong> WebSocket</strong> clients with zero sequential delay.
-                                </p>
-                            </div>
-                            <div className="hero-flow">
-                                <div className="flow-node api">CoinGecko<br /><span>API</span></div>
-                                <div className="flow-arrow">→</div>
-                                <div className="flow-node proc">Data<br /><span>Processor</span></div>
-                                <div className="flow-arrow">→</div>
-                                <div className="flow-split">
-                                    <div className="flow-node db">MySQL<br /><span>DB Stream</span></div>
-                                    <div className="flow-node ws">WebSocket<br /><span>WS Stream</span></div>
-                                </div>
-                            </div>
+                                {/* PIPELINE Section */}
+                                <Route path="/websocket-stream" element={<WebSocketStream />} />
+                                <Route path="/mysql-storage" element={<MySQLStorage />} />
+                                <Route path="/dataset-management" element={<DatasetManagement />} />
+
+                                {/* MANAGEMENT Section */}
+                                <Route path="/settings" element={<Settings />} />
+                                <Route path="/access-control" element={<AccessControl />} />
+                            </Routes>
                         </div>
-
-                        {/* ── Section 1: Metric Cards ── */}
-                        <MetricCards stats={stats} totalUpdates={totalUpdates} coinCount={coinCount} />
-
-                        {/* ── Section 2: Sparklines ── */}
-                        {coinCount > 0 && (
-                            <div className="spark-section">
-                                <p className="spark-section-title">Price Sparklines (rolling history)</p>
-                                <SparklineGrid coins={coins} history={history} />
-                            </div>
-                        )}
-
-                        {/* ── Section 3: Charts Row ── */}
-                        <div className="charts-row">
-                            <MarketCapChart coins={coins} />
-                            <VolumeChart coins={coins} />
-                        </div>
-
-                        {/* ── Section 4: Live Table ── */}
-                        <CoinTable coins={coins} />
-
-                        {/* ── Section 5: Data Import & Analytics ── */}
-                        <DataImport />
-
-                        {/* ── Section 6: Pipeline Log ── */}
-                        <PipelineLog />
-
-                    </div>
-                </main>
+                    </main>
+                </div>
             </div>
-        </div>
+        </Router>
     );
 }
-}
+

@@ -30,7 +30,11 @@ function RangeBar({ low, high, current }) {
 }
 
 function CoinTable({ coins }) {
-    const coinList = Object.values(coins).sort((a, b) => b.market_cap - a.market_cap);
+    if (!coins || typeof coins !== 'object' || Object.keys(coins).length === 0) {
+        return <div style={{ padding: '20px', textAlign: 'center', color: '#7aa8c7' }}>⏳ Waiting for coin data…</div>;
+    }
+    
+    const coinList = Object.values(coins).sort((a, b) => (b.market_cap || 0) - (a.market_cap || 0));
     const prevPrices = useRef({});
     const [flashIds, setFlashIds] = useState(new Set());
 

@@ -31,6 +31,7 @@ class ApiClient {
         this._timer = null;
         this._callbacks = [];   // Supports multiple listeners
         this._isRunning = false;
+        this._isFetching = false;  // Prevent concurrent requests
     }
 
     /**
@@ -47,6 +48,12 @@ class ApiClient {
      * Returns an array of raw coin data objects.
      */
     async _fetch() {
+        // Prevent concurrent requests
+        if (this._isFetching) {
+            return;
+        }
+
+        this._isFetching = true;
         try {
             const response = await axios.get(`${BASE_URL}/coins/markets`, {
                 params: {
@@ -62,7 +69,7 @@ class ApiClient {
             });
 
             const rawData = response.data;
-            console.log(`📡 [${new Date().toISOString()}] Fetched ${rawData.length} coins from CoinGecko`);
+            console.log(`[API_FETCH] Fetched ${rawData.length} coins from CoinGecko at ${new Date().toISOString()}`);
 
             // Notify all registered listeners with raw data
             this._callbacks.forEach(fn => fn(rawData));
@@ -70,12 +77,20 @@ class ApiClient {
         } catch (err) {
             // Log the error but don't crash — the next poll will retry
             if (err.response) {
-                console.error(`❌ API Error ${err.response.status}: ${err.response.statusText}`);
+                console.error(`[API_ERROR] ${err.response.status}: ${err.response.statusText}`);
+                if (err.response.status === 429) {
+                    console.warn('[RATE_LIMIT] Rate limited by CoinGecko. Increasing poll interval to 60s...');
+                    // Temporarily increase poll interval on 429
+                    this.stop();
+                    this._timer = setInterval(() => this._fetch(), 60000);
+                }
             } else if (err.code === 'ECONNABORTED') {
-                console.error('❌ API request timed out');
+                console.error('[API_ERROR] Request timed out');
             } else {
-                console.error('❌ Network error:', err.message);
+                console.error('[API_ERROR] Network error:', err.message);
             }
+        } finally {
+            this._isFetching = false;
         }
     }
 
@@ -86,7 +101,7 @@ class ApiClient {
     start() {
         if (this._isRunning) return;
         this._isRunning = true;
-        console.log(`🚀 API Ingestion started — polling every ${POLL_INTERVAL / 1000}s`);
+        console.log(`[API_CLIENT] Ingestion started - polling every ${POLL_INTERVAL / 1000}s`);
 
         // Immediate first fetch
         this._fetch();
@@ -103,7 +118,7 @@ class ApiClient {
             clearInterval(this._timer);
             this._timer = null;
             this._isRunning = false;
-            console.log('🛑 API Ingestion stopped');
+            console.log('[API_CLIENT] Ingestion stopped');
         }
     }
 }

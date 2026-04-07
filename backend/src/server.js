@@ -76,8 +76,12 @@ app.use((req, res, next) => {
 // Request logging
 app.use(requestLogger);
 
-// Rate limiting (100 requests per minute per IP)
-const rateLimiter = new RateLimiter(60000, 100);
+// Rate limiting
+// Development: 500 req/min | Production: 100 req/min
+const isDev = process.env.NODE_ENV !== 'production';
+const maxRequests = isDev ? 500 : 100; // Much more lenient in dev
+const rateLimiter = new RateLimiter(60000, maxRequests);
+console.log(`[RATE_LIMITER] ${maxRequests} req/min (${isDev ? 'DEVELOPMENT' : 'PRODUCTION'})`);
 app.use('/api', rateLimiter.middleware());
 
 // ── 5. REST Routes ────────────────────────────────────────────────────────────
@@ -87,7 +91,6 @@ app.use('/auth', authRoutes);
 // API routes (with rate limiting)
 app.use('/api', apiRoutes);
 
-// Root ping
 app.get('/', (_req, res) => {
     sendSuccess(res, {
         project: 'Dual Streaming Pipeline',
@@ -130,18 +133,18 @@ app.use((req, res) => {
     sendError(res, `Route not found: ${req.method} ${req.path}`, 404, 'NOT_FOUND');
 });
 
-// ── 7. Socket.io Connection Events ───────────────────────────────────────────
+// Socket.io Connection Events
 io.on('connection', (socket) => {
-    console.log(`🔌 [WS] Client connected    — id: ${socket.id}  total: ${io.engine.clientsCount}`);
+    console.log(`[WS_CONNECT] Client connected - ID: ${socket.id} | Total: ${io.engine.clientsCount}`);
 
     // Emit a welcome ping so the client knows it's live
     socket.emit('connected', {
-        message: '✅ Connected to Dual Streaming Pipeline',
+        message: 'Connected to Dual Streaming Pipeline',
         server_time: new Date().toISOString(),
     });
 
     socket.on('disconnect', (reason) => {
-        console.log(`🔌 [WS] Client disconnected — id: ${socket.id}  reason: ${reason}  remaining: ${io.engine.clientsCount}`);
+        console.log(`[WS_DISCONNECT] Client disconnected - ID: ${socket.id} | Reason: ${reason} | Remaining: ${io.engine.clientsCount}`);
     });
 });
 

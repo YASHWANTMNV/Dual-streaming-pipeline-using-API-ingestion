@@ -17,6 +17,9 @@ import axios from 'axios';
 const API = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 const MAX_HISTORY = 50; // Keep last 50 data points per coin for sparklines
 
+// Global request deduplication to prevent multiple simultaneous calls
+let requestPromises = {};
+
 export function useCryptoStream() {
     const [coins, setCoins] = useState({});         // { btc: {...}, eth: {...} }
     const [history, setHistory] = useState({});         // { btc: [{price,time},...] }
@@ -26,15 +29,26 @@ export function useCryptoStream() {
     const [totalUpdates, setTotalUpdates] = useState(0);
 
     const historyRef = useRef({});
+    const mounted = useRef(true);
 
-    // ── A. Fetch initial data via REST ─────────────────────────────────────────
+    // ── A. Fetch initial data via REST (with deduplication) ──────────────────
     useEffect(() => {
         const fetchInitial = async () => {
             try {
-                const [latestRes, statsRes] = await Promise.all([
-                    axios.get(`${API}/api/latest`),
-                    axios.get(`${API}/api/stats`),
-                ]);
+                // Deduplicate: if request already in flight, reuse it
+                const key = 'initial-load';
+                
+                if (!requestPromises[key]) {
+                    requestPromises[key] = Promise.all([
+                        axios.get(`${API}/api/latest`, { timeout: 5000 }),
+                        axios.get(`${API}/api/stats`, { timeout: 5000 }),
+                    ]);
+                }
+
+                const [latestRes, statsRes] = await requestPromises[key];
+
+                // Only update if component is still mounted
+                if (!mounted.current) return;
 
                 if (latestRes.data.success) {
                     const map = {};
@@ -44,22 +58,31 @@ export function useCryptoStream() {
                 if (statsRes.data.success) {
                     setStats(statsRes.data.data);
                 }
+
+                // Clear promise after use
+                delete requestPromises[key];
             } catch (err) {
                 console.warn('REST initial load failed (pipeline may not have data yet):', err.message);
+                // Clear promise on error
+                delete requestPromises['initial-load'];
             }
         };
         fetchInitial();
+
+        return () => {
+            mounted.current = false;
+        };
     }, []);
 
-    // ── B. Subscribe to WebSocket events ──────────────────────────────────────
+    // ── B. Subscribe to WebSocket events (main data source) ──────────────────
     useEffect(() => {
         socket.on('connect', () => {
-            console.log('🔌 WebSocket connected');
+            console.log('🔌 WebSocket connected - using real-time data');
             setConnected(true);
         });
 
         socket.on('disconnect', () => {
-            console.log('🔌 WebSocket disconnected');
+            console.log('🔌 WebSocket disconnected - falling back to cache');
             setConnected(false);
         });
 
@@ -68,6 +91,8 @@ export function useCryptoStream() {
         });
 
         socket.on('crypto:update', (payload) => {
+            if (!mounted.current) return;
+
             const { timestamp, data } = payload;
 
             setLastUpdate(timestamp);

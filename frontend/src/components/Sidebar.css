@@ -170,3 +170,24 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.logout-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 18px;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-base);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logout-btn:hover {
+  background: var(--bg-card-hover);
+  color: var(--accent-error);
+  transform: scale(1.1);
+}
